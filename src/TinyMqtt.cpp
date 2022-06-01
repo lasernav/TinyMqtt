@@ -633,10 +633,62 @@ if (mesg->type() != MqttMessage::Type::PingReq && mesg->type() != MqttMessage::T
 	}
 }
 
+// Wildcard(#/+) support version
+// as seen in https://github.com/nopnop2002/esp-idf-mqtt-broker/
+int Topic::compareWildcard(const Topic& topic) const
+{
+	size_t i1 = 0;
+	size_t i2 = 0;
+
+    const char * str1 = topic.c_str();
+    const char * str2 = c_str();
+
+    size_t len1 = strlen(str1);
+	size_t len2 = strlen(str2);
+
+	while (i1 < len1 && i2 < len2) {
+		int c1 = str1[i1];
+		int c2 = str2[i2];
+		//printf("c1=%c c2=%c\n",c1, c2);
+
+		// str2=[/hoge/#]
+		if (c2 == '#') return 0;
+
+		// str2=[/hoge/+/123]
+		// Search next slash
+		if (c2 == '+') {
+			// str1=[/hoge//123]
+			// str2=[/hoge/+/123]
+			if (c1 == '/') {
+				i2++;
+			// str1=[/hoge/123/123]
+			// str2=[/hoge/+/123]
+			} else {
+				for (i1=i1;i1+1<len1;i1++) {
+					int c3 = str1[i1+1];
+					//printf("i1=%ld c3=%c\n", i1, c3);
+					if (c3 == '/') break;
+				}
+				i1++;
+				i2++;
+			}
+		} else {
+			if (c1 < c2) return -1;
+			if (c1 > c2) return 1;
+			i1++;
+			i2++;
+		}
+	}
+	if (i1 < len1) return 1;
+	if (i2 < len2) return -1;
+	return 0;
+}
+
 bool Topic::matches(const Topic& topic) const
 {
 	if (getIndex() == topic.getIndex()) return true;
 	if (str() == topic.str()) return true;
+	if (compareWildcard(topic) == 0) return true;
 	return false;
 }
 

@@ -59,6 +59,8 @@ class Topic : public IndexedString
 		const char* c_str() const { return str().c_str(); }
 
 		bool matches(const Topic&) const;
+	private:
+		int compareWildcard(const Topic& topic) const;
 };
 
 class MqttClient;
